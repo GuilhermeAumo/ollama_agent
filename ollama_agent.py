@@ -206,9 +206,40 @@ class Agent:
         self.tools = tools if tools else []
         self.tool_map = {tool.name: tool for tool in self.tools}
         self.model_name = model_name
+        self.system_prompt = self._get_system_prompt()
         print(f"{Colors.BLUE}Using Ollama model: {self.model_name}{Colors.ENDC}")
         print(f"{Colors.BLUE}Make sure '{self.model_name}' is pulled ('ollama pull {self.model_name}') and supports tool calling.{Colors.ENDC}")
 
+    def _get_system_prompt(self):
+        # Construct tool descriptions for the initial prompt
+        tool_descriptions_list = []
+        for t_def in self.tools:
+            param_details = []
+            if t_def.input_schema and t_def.input_schema.get("properties"):
+                for pname, pval in t_def.input_schema["properties"].items():
+                    ptype = pval.get("type", "any")
+                    pdesc = pval.get("description", "")
+                    preq = "required" if pname in t_def.input_schema.get("required", []) else "optional"
+                    param_details.append(f"  - {pname} ({ptype}, {preq}): {pdesc}")
+            param_str = "\n" + "\n".join(param_details) if param_details else " (no parameters)"
+            tool_descriptions_list.append(f"- Tool: '{t_def.name}'\n  Description: {t_def.description}\n  Parameters:\n{param_str}")
+        
+        tool_descriptions_string = "\n\n".join(tool_descriptions_list)
+
+        return f"""You are a code agent assistant powered by Ollama. Your role is to help the user with their coding tasks. Follow these guidelines:
+
+Available Tools:
+----------------
+{tool_descriptions_string}
+----------------
+
+Key Notes:
+- Always specify full file paths (relative to the working directory).
+- For `edit_file`, if `old_str` is empty, the file will be created or `new_str` appended.
+- If a file doesn't exist and `old_str` is non-empty, the operation fails.
+
+
+Think before you answer, and remember to use the tools you have available if necessary."""
 
     def get_user_message(self):
         try:
@@ -256,7 +287,7 @@ class Agent:
 
     def run(self):
         """Main loop for the agent."""
-        conversation = []
+        conversation = [{"role": "system", "content": self.system_prompt}]
         print(f"Chat with Ollama (model: {self.model_name}). Use 'ctrl-c' or 'ctrl-d' to quit.")
 
         needs_user_input = True
