@@ -368,5 +368,5 @@ if __name__ == "__main__":
         EDIT_FILE_DEFINITION,
     ]
     
-    agent = Agent(tools=available_tools, model_name="qwen3:8b") 
+    agent = Agent(tools=available_tools, model_name="qwen3:custom") 
     agent.run()
