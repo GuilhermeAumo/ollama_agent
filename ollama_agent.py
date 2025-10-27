@@ -12,6 +12,7 @@ class Colors:
     RED = '\033[91m'
     ENDC = '\033[0m'
 
+
 class ToolDefinition:
     """
     A simple class to hold tool definition details.
